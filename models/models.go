@@ -1,39 +1,28 @@
 package models
 
 import (
-  "rand"
-  "time"
+  "crypto/rand"
+  "appengine/datastore"
 )
 
-func init() {
-  rand.Seed(time.Nanoseconds())
-}
-
 type User struct {
-  Public []byte
-  Private []byte
-  Nickname string
+  Nickname string `json:"nickname"`
 }
-
-type Device struct {
+type Auth struct {
+  User *datastore.Key
   Public []byte
   Private []byte
-  Nickname string
 }
 func random32() []byte {
   slice := make([]byte, 32)
-  for i := 0; i < 8; i++ {
-    randomValue := rand.Int()
-    for j := 0; j < 4; j++ {
-      slice[i*4 + j] = byte(randomValue >> uint(j*8))
-    }
-  }
+  rand.Read(slice)
   return slice
 }
-func NewDevice() *Device {
-  device := &Device { 
+func NewAuth(user *datastore.Key) *Auth {
+  auth := &Auth {
+    User: user,
     Public: random32(),
     Private: random32(),
   }
-  return device
+  return auth
 }
