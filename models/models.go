@@ -26,3 +26,7 @@ func NewAuth(user *datastore.Key) *Auth {
   }
   return auth
 }
+
+type Game struct {
+  Name string
+}
