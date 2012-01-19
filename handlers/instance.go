@@ -17,5 +17,5 @@ type instanceHandler struct { lib.BaseHandler }
 
 func (handler *instanceHandler) Post(w lib.JsonResponse, r *lib.JsonRequest) {
   proxy := rackspace.NewProxy(appengine.NewContext((*http.Request)(r)))
-  fmt.Print(proxy.Auth)
+  fmt.Print(proxy.ListImages())
 }
