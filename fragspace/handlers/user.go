@@ -4,9 +4,9 @@ import (
   "fmt"
   "http"
   "models"
-  "lib"
   "appengine"
   "appengine/datastore"
+  fhttp "fragspace/http"
 )
 
 func init() {
@@ -15,38 +15,38 @@ func init() {
   http.Handle("/user", u)
 }
 
-type userHandler struct { lib.BaseHandler }
+type userHandler struct { fhttp.BaseHandler }
 
 type postResponse struct {
-  Public string `json:"public"`
-  Private string `json:"private"`
+  Authentication string `json:"authentication"`
 }
 
-func (handler *userHandler) Post(w lib.JsonResponse, r *lib.JsonRequest) {
+func (handler *userHandler) Post(r *fhttp.JsonRequest) fhttp.Response {
   user := new(models.User)
   err := r.Extract(user)
   if err != nil {
-    panic(lib.UserError{"invalid json"})
+    return fhttp.UserError("invalid json")
   }
   if user.Nickname == "" {
-    panic(lib.UserError{"nickname cannot be empty"})
+    return fhttp.UserError("nickname cannot be empty")
   }
 
   context := appengine.NewContext((*http.Request)(r))
   userKey, err := datastore.Put(context, datastore.NewIncompleteKey(context, "User", nil), user)
   if err != nil {
-    panic(lib.ServerError{err.String()})
+    return fhttp.ServerError(err.String())
   }
 
   auth := models.NewAuth(userKey)
   _, err = datastore.Put(context, datastore.NewIncompleteKey(context, "Auth", nil), auth)
   if err != nil {
-    panic(lib.ServerError{err.String()})
+    return fhttp.ServerError(err.String())
   }
-  w.Success(&postResponse{
-    fmt.Sprintf("%x", auth.Public),
-    fmt.Sprintf("%x", auth.Private),
-  })
+  return fhttp.JsonResponse{
+    &postResponse{
+      fmt.Sprintf("%x", auth.Public),
+    },
+  }
 }
 
 /*
@@ -57,3 +57,4 @@ func userHandler(w http.ResponseWriter, r *http.Request) {
   fmt.Fprintf(w, "%x", user.Public)
 }
 */
+
