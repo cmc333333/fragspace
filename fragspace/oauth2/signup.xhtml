@@ -3,11 +3,17 @@
     <title>FragSpace SignUp</title>
   </head>
   <body>
+    <ul class="errors">
+      {{range .Msgs}}
+        <li>{{. | html}}</li>
+      {{end}}
+    </ul>
     <form method="POST">
       <input type="hidden" name="response_type" value="{{.ResponseType | html}}" />
       <input type="hidden" name="client_id" value="{{.ClientId | html}}" />
       <label for="email">Email:</label><input type="text" id="email" name="email" />
-      <label for="password">Password:</label><input type="text" id="password" name="password" />
+      <label for="password">Password:</label><input type="password" id="password" name="password" />
+      <input type="submit" value="Create User" />
     </form>
   </body>
 </html>
