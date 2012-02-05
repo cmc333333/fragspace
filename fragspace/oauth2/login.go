@@ -9,14 +9,15 @@ import (
   "appengine"
   "appengine/datastore"
 
+  "fragspace/frontend"
   "fragspace/model"
 )
 
 func init() {
   http.HandleFunc("/oauth2/auth", func(w http.ResponseWriter, r *http.Request) {
     switch r.Method {
-      case "POST": loginPost(w, r)
-      default: loginGet(w, r, make([]string, 0))
+      case "POST": frontend.WithSession(w, r, loginPost)
+      default: frontend.WithSession(w, r, loginGet)
     }
   })
 }
@@ -27,7 +28,7 @@ type LoginModel struct {
   Msgs []string
 }
 
-func loginGet(w http.ResponseWriter, r *http.Request, msgs []string) {
+func loginGet(w http.ResponseWriter, r *http.Request, session *frontend.Session) {
   responseType, clientId, err := params(r)
   if err != nil {
     err.WriteTo(w)
@@ -37,7 +38,7 @@ func loginGet(w http.ResponseWriter, r *http.Request, msgs []string) {
   loginModel := &LoginModel{
     responseType,
     clientId,
-    msgs,
+    session.Errors,
   }
   if err := loginTemplate.Execute(w, loginModel); err != nil {
     c := appengine.NewContext(r)
@@ -45,8 +46,8 @@ func loginGet(w http.ResponseWriter, r *http.Request, msgs []string) {
     http.Error(w, err.String(), http.StatusInternalServerError)
   }
 }
-func loginPost(w http.ResponseWriter, r *http.Request) {
-  _, _, err := params(r)
+func loginPost(w http.ResponseWriter, r *http.Request, session *frontend.Session) {
+  responseType, clientId, err := params(r)
   if err != nil {
     err.WriteTo(w)
     return
@@ -77,9 +78,12 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
     }
     if found {
       key := newCodeKey(foundKey, context)
-      http.RedirectHandler("/oauth/local?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
+      http.RedirectHandler("/oauth2/local?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
     } else {
-      loginGet(w, r, []string{"Incorrect Password"})
+      session.Errors = []string{"Incorrect Password"}
+      session.Changed = true
+      http.RedirectHandler("/oauth2/auth?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
+        url.QueryEscape(clientId), 303).ServeHTTP(w, r)
     }
   }
 }
