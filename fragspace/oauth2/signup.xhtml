@@ -15,5 +15,6 @@
       <label for="password">Password:</label><input type="password" id="password" name="password" />
       <input type="submit" value="Create User" />
     </form>
+    <a href="/oauth2/auth?response_type={{.ResponseType | urlquery}}&client_id={{.ClientId | urlquery}}">Login</a>
   </body>
 </html>

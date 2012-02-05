@@ -3,7 +3,18 @@
     <title>FragSpace Login</title>
   </head>
   <body>
+    <ul class="errors">
+      {{range .Msgs}}
+        <li>{{. | html}}</li>
+      {{end}}
+    </ul>
+    <form method="POST">
+      <input type="hidden" name="response_type" value="{{.ResponseType | html}}" />
+      <input type="hidden" name="client_id" value="{{.ClientId | html}}" />
+      <label for="email">Email:</label><input type="text" id="email" name="email" />
+      <label for="password">Password:</label><input type="password" id="password" name="password" />
+      <input type="submit" value="Login" />
+    </form>
     <a href="/oauth2/signup?response_type={{.ResponseType | urlquery}}&client_id={{.ClientId | urlquery}}">Create Account</a>
-    Testing, G
   </body>
 </html>

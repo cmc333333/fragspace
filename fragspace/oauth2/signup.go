@@ -13,19 +13,18 @@ import (
 )
 
 func init() {
-  http.HandleFunc("/oauth2/signup", SignUp)
+  http.HandleFunc("/oauth2/signup", func(w http.ResponseWriter, r *http.Request) {
+    switch r.Method {
+      case "POST": signupPost(w, r)
+      default: signupGet(w, r, make([]string, 0))
+    }
+  })
 }
 
 type SignUpModel struct {
   ResponseType string
   ClientId string
   Msgs []string
-}
-func SignUp(w http.ResponseWriter, r *http.Request) {
-  switch r.Method {
-    case "POST": signupPost(w, r)
-    default: signupGet(w, r, make([]string, 0))
-  }
 }
 func signupGet(w http.ResponseWriter, r *http.Request, msgs []string) {
   responseType, clientId, err := params(r)
@@ -61,6 +60,19 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
   if len(password) < 6 {
     msgs.PushBack("Password is too short")
   }
+  //  Also check if email already exists
+  user := model.NewUser(email)
+  context := appengine.NewContext(r)
+  countExists, e := datastore.NewQuery("User").Filter("EmailHash =", user.EmailHash).Count(context)
+  if e != nil {
+    context.Errorf("%v", e)
+    http.Error(w, e.String(), http.StatusInternalServerError)
+    return
+  }
+  if countExists > 0 {
+    msgs.PushBack("Email already exists")
+  }
+
   if msgsLen := msgs.Len() ; msgsLen > 0 {
     msgsSlice := make([]string, msgsLen)
     for i, el := 0, msgs.Front(); el != nil; i, el = i+1, el.Next() {
@@ -68,8 +80,6 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
     }
     signupGet(w, r, msgsSlice)
   } else {
-    user := &model.User{email}
-    context := appengine.NewContext(r)
     userKey, err := datastore.Put(context, datastore.NewIncompleteKey(context, "User", nil), user)
     if err != nil {
       context.Errorf("Error saving: %v", err)

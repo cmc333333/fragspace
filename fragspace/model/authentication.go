@@ -1,10 +1,8 @@
 package model
 
 import (
-  "bytes"
-  "gob"
-
   "appengine/datastore"
+
   "libs/passwordhash"
 )
 
@@ -15,11 +13,12 @@ type Authentication struct {
 }
 
 func NewPasswordAuth(userKey *datastore.Key, password string) *Authentication {
-  hashBuffer := bytes.NewBuffer(make([]byte, 0, 1000000))
-  gob.NewEncoder(hashBuffer).Encode(passwordhash.New(password))
   return &Authentication{
     userKey,
-    hashBuffer.Bytes(),
+    passwordHash(password),
     "password",
   }
+}
+func (auth *Authentication) PasswordHash() *passwordhash.PasswordHash {
+  return decodePassword(auth.Token)
 }
