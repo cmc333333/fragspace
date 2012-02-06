@@ -1,22 +1,24 @@
 package oauth2
 
 import (
-  "container/list"
   "http"
   "regexp"
+  "strings"
   "template"
+  "url"
 
   "appengine"
   "appengine/datastore"
 
   "fragspace/model"
+  "fragspace/slicelib"
 )
 
 func init() {
   http.HandleFunc("/oauth2/signup", func(w http.ResponseWriter, r *http.Request) {
     switch r.Method {
       case "POST": signupPost(w, r)
-      default: signupGet(w, r, make([]string, 0))
+      default: signupGet(w, r)
     }
   })
 }
@@ -26,7 +28,7 @@ type SignUpModel struct {
   ClientId string
   Msgs []string
 }
-func signupGet(w http.ResponseWriter, r *http.Request, msgs []string) {
+func signupGet(w http.ResponseWriter, r *http.Request) {
   responseType, clientId, err := params(r)
   if err != nil {
     err.WriteTo(w)
@@ -36,7 +38,7 @@ func signupGet(w http.ResponseWriter, r *http.Request, msgs []string) {
   signupModel := &SignUpModel{
     responseType,
     clientId,
-    msgs,
+    slicelib.Filter(strings.Split(r.FormValue("msgs"), "|"), slicelib.IsNonEmpty),
   }
   if err := signupTemplate.Execute(w, signupModel); err != nil {
     c := appengine.NewContext(r)
@@ -45,20 +47,19 @@ func signupGet(w http.ResponseWriter, r *http.Request, msgs []string) {
   }
 }
 func signupPost(w http.ResponseWriter, r *http.Request) {
-  _, _, err := params(r)
-  //responseType, clientId, err := params(r)
+  responseType, clientId, err := params(r)
   if err != nil {
     err.WriteTo(w)
     return
   }
   email, password := r.FormValue("email"), r.FormValue("password")
   emailRegexp := regexp.MustCompile(`^[a-z0-9._%\-+]+@[a-z0-9.\-]+\.[a-z]+$`)
-  msgs := list.New()
+  msgs := make([]string, 0, 5)
   if !emailRegexp.MatchString(email) {
-    msgs.PushBack("Invalid email address")
+    msgs = append(msgs, "Invalid email address")
   }
   if len(password) < 6 {
-    msgs.PushBack("Password is too short")
+    msgs = append(msgs, "Password is too short")
   }
   //  Also check if email already exists
   user := model.NewUser(email)
@@ -70,15 +71,12 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
     return
   }
   if countExists > 0 {
-    msgs.PushBack("Email already exists")
+    msgs = append(msgs, "Email already exists")
   }
 
-  if msgsLen := msgs.Len() ; msgsLen > 0 {
-    msgsSlice := make([]string, msgsLen)
-    for i, el := 0, msgs.Front(); el != nil; i, el = i+1, el.Next() {
-      msgsSlice[i] = el.Value.(string)
-    }
-    signupGet(w, r, msgsSlice)
+  if msgsLen := len(msgs) ; msgsLen > 0 {
+    http.RedirectHandler("/oauth2/signup?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
+      url.QueryEscape(clientId) + "&msgs=" + url.QueryEscape(strings.Join(msgs, "|")), 303).ServeHTTP(w,r)
   } else {
     userKey, err := datastore.Put(context, datastore.NewIncompleteKey(context, "User", nil), user)
     if err != nil {
@@ -92,6 +90,7 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
       w.Write([]byte("Error saving: " + err.String()))
       return
     }
-    w.Write([]byte("User created"))
+    key := newCodeKey(userKey, context)
+    http.RedirectHandler("/authCallback?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
   }
 }

@@ -2,6 +2,8 @@ package model
 
 import (
   "strings"
+
+  "fragspace/encryption"
 )
 
 type User struct {
@@ -11,10 +13,10 @@ type User struct {
 
 func NewUser(email string) *User {
   return &User{
-    encrypt(email, configKey("user.email")),
-    hash(strings.ToLower(email), configKey("user.emailHash")),
+    encryption.AESEncrypt(email, "user.email"),
+    hash(strings.ToLower(email), encryption.ConfigKey("user.emailHash")),
   }
 }
 func UserEmail(email string) string {
-  return hash(strings.ToLower(email), configKey("user.emailHash"))
+  return hash(strings.ToLower(email), encryption.ConfigKey("user.emailHash"))
 }

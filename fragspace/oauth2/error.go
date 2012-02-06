@@ -3,7 +3,8 @@ package oauth2
 import (
   "http"
 
-  "libs/conf"
+  "appengine"
+  "appengine/datastore"
 
   fhttp "fragspace/http"
 )
@@ -24,6 +25,9 @@ func invalidRequest(description string) Error {
 func invalidClient(description string) Error {
   return Error{Error: "invalid_client", ErrorDescription: description}
 }
+func accessDenied(description string) Error {
+  return Error{Error: "access_denied", ErrorDescription: description}
+}
 
 func params(r *http.Request) (responseType string, clientId string, retError fhttp.Response) {
   responseType, clientId = r.FormValue("response_type"), r.FormValue("client_id")
@@ -39,6 +43,17 @@ func params(r *http.Request) (responseType string, clientId string, retError fht
     retError = invalidClient("no client_id")
     return
   }
+  context := appengine.NewContext(r)
+
+  clientKey := datastore.NewKey(context, "OAuthClient", clientId, 0, nil)
+  var client Client
+  if err := datastore.Get(context, clientKey, &client); err != nil {
+    retError = invalidClient("")
+    return
+  }
+  return
+  /*
+  //  redirect if logged in
   config, err := conf.ReadConfigFile("config.ini")
   if err != nil {
     retError = fhttp.ServerError("could not read config file: " + err.String())
@@ -54,4 +69,5 @@ func params(r *http.Request) (responseType string, clientId string, retError fht
     return
   }
   return
+  */
 }

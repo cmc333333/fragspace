@@ -12,6 +12,8 @@ import (
 type Session struct {
   Key string
   Errors []string
+  Notices []string
+  Token []byte
   Changed bool `datastore:"-"`
 }
 
@@ -21,19 +23,23 @@ func NewSession(context appengine.Context) *Session {
     panic(err)
   }
   key := base64.StdEncoding.EncodeToString(buff)
-  session := &Session{key, []string{}, true}
+  session := &Session{key, []string{}, []string{}, []byte{}, true}
   return session
+}
+
+func (session *Session) SetCookie(w http.ResponseWriter, context appengine.Context) {
+  cookie := &http.Cookie{
+    Name: "session",
+    Value: session.Key,
+  }
+  w.Header().Add("Set-Cookie", cookie.String())
 }
 
 func CurrentSession(w http.ResponseWriter, r *http.Request, context appengine.Context) *Session {
   cookie, err := r.Cookie("session")
   if err != nil { //  no such cookie yet
     session := NewSession(context)
-    cookie := &http.Cookie{
-      Name: "session",
-      Value: session.Key,
-    }
-    w.Header().Add("Set-Cookie", cookie.String())
+    session.SetCookie(w, context)
     return session
   }
   dsKey := datastore.NewKey(context, "Session", cookie.Value, 0, nil)

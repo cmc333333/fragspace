@@ -1,23 +1,23 @@
 package oauth2
 
 import (
-//  "container/list"
   "http"
+  "strings"
   "template"
   "url"
 
   "appengine"
   "appengine/datastore"
 
-  "fragspace/frontend"
   "fragspace/model"
+  "fragspace/slicelib"
 )
 
 func init() {
   http.HandleFunc("/oauth2/auth", func(w http.ResponseWriter, r *http.Request) {
     switch r.Method {
-      case "POST": frontend.WithSession(w, r, loginPost)
-      default: frontend.WithSession(w, r, loginGet)
+      case "POST": loginPost(w, r)
+      default: loginGet(w, r)
     }
   })
 }
@@ -28,7 +28,7 @@ type LoginModel struct {
   Msgs []string
 }
 
-func loginGet(w http.ResponseWriter, r *http.Request, session *frontend.Session) {
+func loginGet(w http.ResponseWriter, r *http.Request) {
   responseType, clientId, err := params(r)
   if err != nil {
     err.WriteTo(w)
@@ -38,7 +38,7 @@ func loginGet(w http.ResponseWriter, r *http.Request, session *frontend.Session)
   loginModel := &LoginModel{
     responseType,
     clientId,
-    session.Errors,
+    slicelib.Filter(strings.Split(r.FormValue("msgs"), "|"), slicelib.IsNonEmpty),
   }
   if err := loginTemplate.Execute(w, loginModel); err != nil {
     c := appengine.NewContext(r)
@@ -46,7 +46,7 @@ func loginGet(w http.ResponseWriter, r *http.Request, session *frontend.Session)
     http.Error(w, err.String(), http.StatusInternalServerError)
   }
 }
-func loginPost(w http.ResponseWriter, r *http.Request, session *frontend.Session) {
+func loginPost(w http.ResponseWriter, r *http.Request) {
   responseType, clientId, err := params(r)
   if err != nil {
     err.WriteTo(w)
@@ -78,12 +78,10 @@ func loginPost(w http.ResponseWriter, r *http.Request, session *frontend.Session
     }
     if found {
       key := newCodeKey(foundKey, context)
-      http.RedirectHandler("/oauth2/local?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
+      http.RedirectHandler("/authCallback?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
     } else {
-      session.Errors = []string{"Incorrect Password"}
-      session.Changed = true
       http.RedirectHandler("/oauth2/auth?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
-        url.QueryEscape(clientId), 303).ServeHTTP(w, r)
+        url.QueryEscape(clientId) + "&msgs=" + url.QueryEscape("Incorrect Password"), 303).ServeHTTP(w, r)
     }
   }
 }
