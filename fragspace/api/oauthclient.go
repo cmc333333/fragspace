@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
   "http"
@@ -14,7 +14,7 @@ import (
 func init() {
   o := new(oauthclientHandler)
   o.Self = o
-  http.Handle("/oauthclient", o)
+  http.Handle("/api/oauthclient", o)
 }
 
 type oauthclientHandler struct { fhttp.BaseHandler }

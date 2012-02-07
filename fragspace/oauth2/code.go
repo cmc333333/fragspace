@@ -3,13 +3,19 @@ package oauth2
 import (
   "crypto/rand"
   "encoding/hex"
+  "time"
 
   "appengine"
-  "appengine/datastore"
   "appengine/memcache"
 )
 
-func newCodeKey(userKey *datastore.Key, context appengine.Context) string {
+type codeStruct struct {
+  ExpiresAt int64
+  User string
+  Client string
+}
+
+func newCodeKey(userKey string, clientKey string, context appengine.Context) string {
   buff := make([]byte, 32)
   if _, err := rand.Read(buff); err != nil {
     panic(err)
@@ -18,7 +24,11 @@ func newCodeKey(userKey *datastore.Key, context appengine.Context) string {
 
   err := memcache.Gob.Set(context, &memcache.Item{
     Key: "oauth-code-" + key,
-    Object: userKey,
+    Object: &codeStruct{
+      time.Seconds() + 60,  //  lasts for 1 min
+      userKey,
+      clientKey,
+    },
   })
   if err != nil {
     context.Warningf("could not write to memcache: %v", err.String())

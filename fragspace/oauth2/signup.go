@@ -90,7 +90,7 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
       w.Write([]byte("Error saving: " + err.String()))
       return
     }
-    key := newCodeKey(userKey, context)
+    key := newCodeKey(userKey.StringID(), clientId, context)
     http.RedirectHandler("/authCallback?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
   }
 }

@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
   "fmt"
@@ -14,7 +14,7 @@ import (
 func init() {
   u := new(userHandler)
   u.Self = u
-  http.Handle("/user", u)
+  http.Handle("/api/user", u)
 }
 
 type userHandler struct { fhttp.BaseHandler }
