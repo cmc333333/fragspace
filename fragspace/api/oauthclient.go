@@ -3,6 +3,7 @@ package api
 import (
   "http"
   "regexp"
+  "url"
 
   "appengine"
   "appengine/datastore"
@@ -20,7 +21,7 @@ func init() {
 type oauthclientHandler struct { fhttp.BaseHandler }
 
 type oauthclientReq struct {
-  Redirect string `json:"redirect_url"`
+  Redirect string `json:"redirect_uri"`
   Name string `json:"name"`
   Email string `json:"email"`
 }
@@ -37,6 +38,9 @@ func (handler *oauthclientHandler) Post(r *fhttp.JsonRequest) fhttp.Response {
   emailRegexp := regexp.MustCompile(`^[a-z0-9._%\-+]+@[a-z0-9.\-]+\.[a-z]+$`)
   if !emailRegexp.MatchString(post.Email) {
     return fhttp.UserError("invalid email address")
+  }
+  if _, err := url.ParseRequest(post.Redirect); err != nil {
+    return fhttp.UserError("invalid redirect uri")
   }
 
   context := appengine.NewContext((*http.Request)(r))

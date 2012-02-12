@@ -7,9 +7,9 @@ import (
 )
 
 func AESEncrypt(valueStr string, configKey string) []byte {
-  return AESEncryptKey(valueStr, ConfigKey(configKey))
+  return AESByteEncrypt([]byte(valueStr), ConfigKey(configKey))
 }
-func AESEncryptKey(valueStr string, key []byte) []byte {
+func AESByteEncrypt(value []byte, key []byte) []byte {
   iv := make([]byte, aes.BlockSize)
   rand.Read(iv)
   aesCipher, err := aes.NewCipher(key)
@@ -17,7 +17,6 @@ func AESEncryptKey(valueStr string, key []byte) []byte {
     panic(err)
   }
   ctr := cipher.NewCTR(aesCipher, iv)
-  value := []byte(valueStr)
   length := len(value)
   toReturn := make([]byte, length + aes.BlockSize)  //  add room for the iv
   copy(toReturn, iv)
@@ -26,9 +25,9 @@ func AESEncryptKey(valueStr string, key []byte) []byte {
 }
 
 func AESDecrypt(value []byte, configKey string) string {
-  return AESDecryptKey(value, ConfigKey(configKey))
+  return string(AESByteDecrypt(value, ConfigKey(configKey)))
 }
-func AESDecryptKey(value []byte, key []byte) string {
+func AESByteDecrypt(value []byte, key []byte) []byte {
   iv := value[:aes.BlockSize]
   aesCipher, err := aes.NewCipher(key)
   if err != nil {
@@ -38,5 +37,5 @@ func AESDecryptKey(value []byte, key []byte) string {
   value = value[aes.BlockSize:]
   toReturn := make([]byte, len(value))
   ctr.XORKeyStream(toReturn, value)
-  return string(toReturn)
+  return toReturn
 }

@@ -3,6 +3,7 @@ package oauth2
 import (
   "crypto/rand"
   "encoding/hex"
+  "url"
 
   "fragspace/encryption"
 )
@@ -31,4 +32,13 @@ func NewClient(redirect string, name string, email string) *Client {
     encryption.AESEncrypt(name, "oauthclient.name"),
     encryption.AESEncrypt(email, "oauthclient.email"),
   }
+}
+
+func (client *Client) redirectUrl(code string) string {
+  //  We assume that the string is of the proper format; safe assumption since we reject invalid uris when saving
+  baseUrl, _ := url.Parse(encryption.AESDecrypt(client.Redirect, "oauthclient.redirect"))
+  query := baseUrl.Query()
+  query.Add("code", code)
+  baseUrl.RawQuery = query.Encode()
+  return baseUrl.String()
 }

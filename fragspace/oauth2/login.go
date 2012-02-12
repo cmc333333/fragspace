@@ -29,7 +29,7 @@ type LoginModel struct {
 }
 
 func loginGet(w http.ResponseWriter, r *http.Request) {
-  responseType, clientId, err := params(r)
+  responseType, client, err := params(r)
   if err != nil {
     err.WriteTo(w)
     return
@@ -37,7 +37,7 @@ func loginGet(w http.ResponseWriter, r *http.Request) {
   loginTemplate := template.Must(template.ParseFile("fragspace/oauth2/login.xhtml"))
   loginModel := &LoginModel{
     responseType,
-    clientId,
+    client.Id,
     slicelib.Filter(strings.Split(r.FormValue("msgs"), "|"), slicelib.IsNonEmpty),
   }
   if err := loginTemplate.Execute(w, loginModel); err != nil {
@@ -47,7 +47,7 @@ func loginGet(w http.ResponseWriter, r *http.Request) {
   }
 }
 func loginPost(w http.ResponseWriter, r *http.Request) {
-  responseType, clientId, err := params(r)
+  responseType, client, err := params(r)
   if err != nil {
     err.WriteTo(w)
     return
@@ -77,11 +77,11 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
       }
     }
     if found {
-      key := newCodeKey(foundKey.StringID(), clientId, context)
-      http.RedirectHandler("/authCallback?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
+      key := newCodeKey(foundKey.StringID(), client.Id, context)
+      http.RedirectHandler(client.redirectUrl(key), 303).ServeHTTP(w, r)
     } else {
       http.RedirectHandler("/oauth2/auth?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
-        url.QueryEscape(clientId) + "&msgs=" + url.QueryEscape("Incorrect Password"), 303).ServeHTTP(w, r)
+        url.QueryEscape(client.Id) + "&msgs=" + url.QueryEscape("Incorrect Password"), 303).ServeHTTP(w, r)
     }
   }
 }

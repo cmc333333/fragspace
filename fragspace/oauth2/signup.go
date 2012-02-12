@@ -29,7 +29,7 @@ type SignUpModel struct {
   Msgs []string
 }
 func signupGet(w http.ResponseWriter, r *http.Request) {
-  responseType, clientId, err := params(r)
+  responseType, client, err := params(r)
   if err != nil {
     err.WriteTo(w)
     return
@@ -37,7 +37,7 @@ func signupGet(w http.ResponseWriter, r *http.Request) {
   signupTemplate := template.Must(template.ParseFile("fragspace/oauth2/signup.xhtml"))
   signupModel := &SignUpModel{
     responseType,
-    clientId,
+    client.Id,
     slicelib.Filter(strings.Split(r.FormValue("msgs"), "|"), slicelib.IsNonEmpty),
   }
   if err := signupTemplate.Execute(w, signupModel); err != nil {
@@ -47,7 +47,7 @@ func signupGet(w http.ResponseWriter, r *http.Request) {
   }
 }
 func signupPost(w http.ResponseWriter, r *http.Request) {
-  responseType, clientId, err := params(r)
+  responseType, client, err := params(r)
   if err != nil {
     err.WriteTo(w)
     return
@@ -76,7 +76,7 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
 
   if msgsLen := len(msgs) ; msgsLen > 0 {
     http.RedirectHandler("/oauth2/signup?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
-      url.QueryEscape(clientId) + "&msgs=" + url.QueryEscape(strings.Join(msgs, "|")), 303).ServeHTTP(w,r)
+      url.QueryEscape(client.Id) + "&msgs=" + url.QueryEscape(strings.Join(msgs, "|")), 303).ServeHTTP(w,r)
   } else {
     userKey, err := datastore.Put(context, datastore.NewIncompleteKey(context, "User", nil), user)
     if err != nil {
@@ -90,7 +90,7 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
       w.Write([]byte("Error saving: " + err.String()))
       return
     }
-    key := newCodeKey(userKey.StringID(), clientId, context)
-    http.RedirectHandler("/authCallback?code=" + url.QueryEscape(key), 303).ServeHTTP(w, r)
+    key := newCodeKey(userKey.StringID(), client.Id, context)
+    http.RedirectHandler(client.redirectUrl(key), 303).ServeHTTP(w, r)
   }
 }

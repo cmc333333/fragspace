@@ -29,8 +29,8 @@ func accessDenied(description string) Error {
   return Error{Error: "access_denied", ErrorDescription: description}
 }
 
-func params(r *http.Request) (responseType string, clientId string, retError fhttp.Response) {
-  responseType, clientId = r.FormValue("response_type"), r.FormValue("client_id")
+func params(r *http.Request) (responseType string, client *Client, retError fhttp.Response) {
+  responseType, clientId := r.FormValue("response_type"), r.FormValue("client_id")
   if responseType == "" {
     retError = invalidRequest("no response type")
     return
@@ -45,9 +45,9 @@ func params(r *http.Request) (responseType string, clientId string, retError fht
   }
   context := appengine.NewContext(r)
 
+  client = new(Client)
   clientKey := datastore.NewKey(context, "OAuthClient", clientId, 0, nil)
-  var client Client
-  if err := datastore.Get(context, clientKey, &client); err != nil {
+  if err := datastore.Get(context, clientKey, client); err != nil {
     retError = invalidClient("")
     return
   }
