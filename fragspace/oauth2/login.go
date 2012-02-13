@@ -77,7 +77,7 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
       }
     }
     if found {
-      key := newCodeKey(foundKey.StringID(), client.Id, context)
+      key := newCodeKey(foundKey.Encode(), client.Id, context)
       http.RedirectHandler(client.redirectUrl(key), 303).ServeHTTP(w, r)
     } else {
       http.RedirectHandler("/oauth2/auth?response_type=" + url.QueryEscape(responseType) + "&client_id=" +

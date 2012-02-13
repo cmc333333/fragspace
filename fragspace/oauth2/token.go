@@ -15,7 +15,7 @@ import (
   fhttp "fragspace/http"
 )
 
-type token struct {
+type Token struct {
   User string
   Client string
   ExpiresAt int64
@@ -63,7 +63,7 @@ func tokenGet(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-  t := token{storedCode.User, storedCode.Client, time.Seconds() + 60*60*24} //  lasts for 1 day
+  t := Token{storedCode.User, storedCode.Client, time.Seconds() + 60*60*24} //  lasts for 1 day
   var buff bytes.Buffer
   if err := gob.NewEncoder(&buff).Encode(&t); err != nil {
     panic(err)
@@ -71,4 +71,22 @@ func tokenGet(w http.ResponseWriter, r *http.Request) {
   }
   encrypted := encryption.AESByteEncrypt(buff.Bytes(), encryption.ConfigKey("oauthtoken"))
   fhttp.JsonResponse{tokenResp{encrypted}}.WriteTo(w)
+}
+
+func DecodeToken(req *http.Request) *Token {
+  authentication := req.Header.Get("Authentication")
+  if len(authentication) < 7 || authentication[:7] != "Bearer " {
+    return nil
+  }
+  tokenStr, err := base64.StdEncoding.DecodeString(authentication[7:])
+  if err != nil {
+    return nil
+  }
+  decrypted := encryption.AESByteDecrypt(tokenStr, encryption.ConfigKey("oauthtoken"))
+  buff := bytes.NewBuffer(decrypted)
+  t := new(Token)
+  if err := gob.NewDecoder(buff).Decode(t); err != nil || t.ExpiresAt < time.Seconds() {
+    return nil
+  }
+  return t
 }
