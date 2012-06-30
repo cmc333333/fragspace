@@ -6,8 +6,6 @@ import (
   "appengine"
   "appengine/datastore"
   "appengine/memcache"
-
-  "fragspace/model"
 )
 
 func init() {
@@ -25,6 +23,7 @@ func authCallback(w http.ResponseWriter, r *http.Request, oldSession *Session) {
   if err != nil {
     w.Write([]byte("Invalid code"))
   } else {
+    /*
     auth := model.NewOAuth2(&userKey)
     if _, err = datastore.Put(context, datastore.NewIncompleteKey(context, "Authentication", nil), auth); err != nil {
       context.Errorf("Error saving: %v", err)
@@ -41,5 +40,6 @@ func authCallback(w http.ResponseWriter, r *http.Request, oldSession *Session) {
     oldSession.SetCookie(w, context)
 
     //  redirect
+    */
   }
 }

@@ -57,7 +57,7 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
   emailHash := model.UserEmail(email)
   context := appengine.NewContext(r)
   query := datastore.NewQuery("User").Filter("EmailHash =", emailHash)
-  found := false
+  found, hasEntries := false, false
   var foundKey *datastore.Key
   for row := query.KeysOnly().Run(context); ; {
     key, e := row.Next(nil)
@@ -66,6 +66,7 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
     }
     query := datastore.NewQuery("Authentication").Filter("Type =", "password").Filter("User =", key)
     for authRow := query.Run(context); ; {
+      hasEntries = true
       var auth model.Authentication
       _, authE := authRow.Next(&auth)
       if authE == datastore.Done {
@@ -81,7 +82,11 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
       http.RedirectHandler(client.redirectUrl(key), 303).ServeHTTP(w, r)
     } else {
       http.RedirectHandler("/oauth2/auth?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
-        url.QueryEscape(client.Id) + "&msgs=" + url.QueryEscape("Incorrect Password"), 303).ServeHTTP(w, r)
+        url.QueryEscape(client.Id) + "&msgs=" + url.QueryEscape("Incorrect Email or Password"), 303).ServeHTTP(w, r)
     }
+  }
+  if !hasEntries {
+      http.RedirectHandler("/oauth2/auth?response_type=" + url.QueryEscape(responseType) + "&client_id=" +
+        url.QueryEscape(client.Id) + "&msgs=" + url.QueryEscape("Incorrect Email or Password"), 303).ServeHTTP(w, r)
   }
 }

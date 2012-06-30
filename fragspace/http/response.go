@@ -21,6 +21,10 @@ func (r JsonResponse) WriteTo(w http.ResponseWriter) {
   w.Write(bytes)
 }
 
+type Success struct{}
+func (s Success) WriteTo(w http.ResponseWriter) {
+}
+
 type error struct {
   Error string `json:"error"`
 }
